@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "honda-thai-nguyen-vinh",
-  "pages_build_output_dir": "./dist",
+  "pages_build_output_dir": "dist",
   "compatibility_date": "2026-11-03",
   "d1_databases": [
     {
       "binding": "LEADS_DB",
       "database_name": "honda-thai-nguyen-leads",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "217539f7-61db-4441-a9f6-1ab5ef51d177",
       "migrations_dir": "migrations"
     }
   ]
