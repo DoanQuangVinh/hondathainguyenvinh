@@ -1,0 +1,35 @@
+{
+  "name": "honda-thai-nguyen-vinh",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader runner",
+    "build": "tsc -b && vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner",
+    "pages:dev": "npx --yes wrangler@latest pages dev dist --config wrangler.jsonc",
+    "d1:create": "npx --yes wrangler@latest d1 create honda-thai-nguyen-leads",
+    "d1:migrate:local": "npx --yes wrangler@latest d1 migrations apply honda-thai-nguyen-leads --local --config wrangler.jsonc",
+    "d1:migrate:remote": "npx --yes wrangler@latest d1 migrations apply honda-thai-nguyen-leads --remote --config wrangler.jsonc",
+    "retention:deploy": "npx --yes wrangler@latest deploy --config workers/lead-retention/wrangler.jsonc"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1",
+    "swiper": "^11.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@types/node": "^22.10.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.7"
+  }
+}

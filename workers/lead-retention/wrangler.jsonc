@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "honda-thai-nguyen-lead-retention",
+  "main": "index.ts",
+  "compatibility_date": "2026-11-03",
+  "triggers": { "crons": ["17 3 * * *"] },
+  "d1_databases": [
+    {
+      "binding": "LEADS_DB",
+      "database_name": "honda-thai-nguyen-leads",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}
