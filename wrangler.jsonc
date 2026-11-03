@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "honda-thai-nguyen-vinh",
+  "name": "hondathainguyenvinh",
   "pages_build_output_dir": "dist",
   "compatibility_date": "2026-11-03",
   "d1_databases": [
@@ -9,6 +9,12 @@
       "database_name": "honda-thai-nguyen-leads",
       "database_id": "217539f7-61db-4441-a9f6-1ab5ef51d177",
       "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "hondathainguyen-media"
     }
   ]
 }
