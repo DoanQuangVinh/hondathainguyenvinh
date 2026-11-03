@@ -14,7 +14,7 @@ export default function Admin() {
   const refresh = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const response = await fetch('/api/admin/leads?limit=200', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      const response = await fetch('/api/admin/leads?limit=200', { credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' })
       const result = await response.json() as Result
       if (!response.ok || result.ok !== true) throw new Error(result.message || (response.status === 401 || response.status === 403 ? 'Đăng nhập bằng tài khoản được cấp quyền Cloudflare Access.' : 'Chưa tải được dữ liệu. Kiểm tra cấu hình Pages, D1 và Access.'))
       setLeads(result.leads || [])
@@ -27,7 +27,7 @@ export default function Admin() {
     if (!window.confirm(`Xóa yêu cầu tư vấn từ ${lead.phone}?`)) return
     setActionId(lead.id); setError('')
     try {
-      const response = await fetch(`/api/admin/leads?id=${encodeURIComponent(lead.id)}`, { method: 'DELETE', headers: { Accept: 'application/json' } })
+      const response = await fetch(`/api/admin/leads?id=${encodeURIComponent(lead.id)}`, { credentials: 'same-origin', method: 'DELETE', headers: { Accept: 'application/json' } })
       const result = await response.json() as Result
       if (!response.ok || result.ok !== true) throw new Error(result.message || 'Không xóa được bản ghi.')
       setLeads(current => current.filter(item => item.id !== lead.id))
