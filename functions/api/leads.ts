@@ -1,7 +1,6 @@
 import { json, type LeadEnv, type PagesFunction } from '../_shared/env.ts'
 
 const CONSENT_VERSION = 'lead-contact-v1'
-const ALLOWED_CARS = new Set(['city', 'civic', 'crv', 'hrv', 'brv', 'accord'])
 const phonePattern = /^(?:\+?84|0)(?:3[2-9]|5[25689]|7[06-9]|8[1-9]|9\d)\d{7}$/
 
 function normalizePhone(value: unknown): string | null {
@@ -68,8 +67,9 @@ export const onRequestPost: PagesFunction<LeadEnv> = async ({ request, env }) =>
   }
   const phone = normalizePhone(payload.phone)
   if (!phone) return json({ ok: false, error: 'invalid_phone', message: 'Vui lòng nhập số điện thoại di động Việt Nam hợp lệ.' }, 422)
-  if (typeof payload.carId !== 'string' || !ALLOWED_CARS.has(payload.carId)) {
-    return json({ ok: false, error: 'invalid_car', message: 'Vui lòng chọn một dòng xe trong danh sách.' }, 422)
+  const carId = payload.carId === '' || payload.carId == null ? 'other' : payload.carId
+  if (typeof carId !== 'string' || !/^[a-z0-9-]{1,64}$/.test(carId)) {
+    return json({ ok: false, error: 'invalid_car', message: 'Vui lòng chọn dòng xe hợp lệ.' }, 422)
   }
   if (payload.consent !== true) {
     return json({ ok: false, error: 'consent_required', message: 'Vui lòng đồng ý để Vinh liên hệ tư vấn trước khi gửi.' }, 422)
@@ -81,11 +81,13 @@ export const onRequestPost: PagesFunction<LeadEnv> = async ({ request, env }) =>
     const allowed = await takeRateLimit(env.LEADS_DB, subjectHash, Math.floor(Date.now() / 1000))
     if (!allowed) return json({ ok: false, error: 'rate_limited', message: 'Bạn đã gửi nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau hoặc gọi Vinh.' }, 429)
 
+    const duplicate = await env.LEADS_DB.prepare("SELECT id FROM leads WHERE phone = ? AND car_id = ? AND created_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 minutes') LIMIT 1").bind(phone, carId).first<{id:string}>()
+    if (duplicate) return json({ ok: true, id: duplicate.id, duplicate: true, message: 'Vinh đã nhận yêu cầu của bạn gần đây.' }, 200)
     const id = crypto.randomUUID()
     const result = await env.LEADS_DB.prepare(`
-      INSERT INTO leads (id, phone, car_id, consent_version, consent_at)
-      VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-    `).bind(id, phone, payload.carId, CONSENT_VERSION).run()
+      INSERT INTO leads (id, phone, car_id, consent_version, consent_at, customer_name, source, notes, appointment_at)
+      VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?, ?, ?, ?)
+    `).bind(id, phone, carId, CONSENT_VERSION, typeof payload.name === 'string' ? payload.name.trim().slice(0,100) : null, ['popup','quote_form','test_drive','contact'].includes(String(payload.source)) ? String(payload.source) : 'popup', typeof payload.notes === 'string' ? payload.notes.trim().slice(0,2000) : null, typeof payload.appointmentAt === 'string' && payload.appointmentAt.length <= 40 ? payload.appointmentAt : null).run()
 
     if (!result.success || result.meta?.changes !== 1) {
       return json({ ok: false, error: 'save_failed', message: 'Chưa lưu được yêu cầu. Vui lòng thử lại hoặc liên hệ Vinh qua điện thoại/Zalo.' }, 503)

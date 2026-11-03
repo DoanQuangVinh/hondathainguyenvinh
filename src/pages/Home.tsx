@@ -6,22 +6,27 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Autoplay } from 'swiper/modules'
 import type { Swiper as SwiperInstance } from 'swiper'
 import 'swiper/css'
-import { cars } from '../data/cars'
-import { articles } from '../data/articles'
-import { business } from '../data/business'
+import { useCatalogArticles, useCatalogCars } from '../hooks/useCatalog'
+import { useBusinessSettings } from '../hooks/BusinessSettings'
 import { CarCard, SectionTitle } from '../components/UI'
 
-const slides = [
-  { eyebrow: 'SEDAN · HONDA SENSING', title: 'Honda City', body: 'Thể thao, hiện đại và sẵn sàng cho nhịp sống mỗi ngày.', image: cars[0].image, slug: 'honda-city', note: 'Giá niêm yết tham khảo từ 539 triệu đồng' },
-  { eyebrow: 'SUV · LINH HOẠT CHO GIA ĐÌNH', title: 'Honda CR-V', body: 'Không gian linh hoạt cùng lựa chọn động cơ xăng và hybrid.', image: cars[2].image, slug: 'honda-cr-v', note: 'Giá niêm yết tham khảo từ 1,039 tỷ đồng' },
-  { eyebrow: 'SEDAN · THỂ THAO', title: 'Honda Civic', body: 'Khám phá lựa chọn động cơ tăng áp và e:HEV.', image: cars[1].image, slug: 'honda-civic', note: 'Giá niêm yết tham khảo từ 789 triệu đồng' },
-  { eyebrow: 'SUV ĐÔ THỊ · e:HEV', title: 'Honda HR-V', body: 'Lựa chọn SUV đô thị với bản xăng và hybrid e:HEV.', image: cars[3].image, slug: 'honda-hr-v', note: 'Giá niêm yết tham khảo từ 669 triệu đồng' }
-]
 export default function Home() {
+  const business = useBusinessSettings()
+  const cars = useCatalogCars()
+  const articles = useCatalogArticles()
+  const featuredCars = cars.filter(car => car.featured)
+  const slides = (featuredCars.length ? featuredCars : cars).slice(0, 4).map(car => ({
+    eyebrow: car.category,
+    title: car.name,
+    body: car.description || `Tìm hiểu ${car.name} và trao đổi với Vinh để xác nhận thông tin mới nhất.`,
+    image: car.image,
+    slug: car.slug,
+    note: car.priceLabel
+  }))
   const [active, setActive] = useState(0); const swiper = useRef<SwiperInstance | null>(null)
   return <>
     <section className="hero honda-hero"><div className="hero-carousel"><Swiper modules={[Autoplay]} loop autoplay={{ delay: 5200, disableOnInteraction: false }} onSwiper={instance => { swiper.current = instance }} onSlideChange={instance => setActive(instance.realIndex)}>{slides.map((slide, i) => <SwiperSlide key={slide.slug}><div className={`hero honda-hero-panel hero-tone-${i}`}><div className="hero-image" style={{ backgroundImage: `url(${slide.image})` }}/><div className="hero-shade"/><div className="container hero-content"><motion.div key={slide.slug} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45 }}><span className="hero-kicker"><i/>{slide.eyebrow}</span><h1>{slide.title}</h1><p>{slide.body}</p><span className="hero-price-note">{slide.note} · xác nhận giá mới nhất cùng Vinh</span><div className="hero-actions"><Link to={`/cars/${slide.slug}`} className="button button-red">Khám phá ngay <ArrowRight size={16}/></Link><Link to="/price-list" className="button button-outline">Nhận báo giá</Link></div></motion.div><div className="hero-bottom"><span className="hero-index">0{active + 1} <b>/ 0{slides.length}</b></span><div className="hero-dots">{slides.map((s, n) => <button key={s.slug} aria-label={`Xem banner ${n + 1}`} onClick={() => swiper.current?.slideToLoop(n)} className={active === n ? 'selected' : ''}/>)}</div><span className="hero-scroll">KHÁM PHÁ DÒNG XE <ChevronDown size={13}/></span></div></div></div></SwiperSlide>)}</Swiper></div><div className="hero-disclaimer">Trang tư vấn bán hàng cá nhân · Không phải website chính thức Honda Việt Nam</div></section>
-    <section className="section container featured-section"><SectionTitle eyebrow="DANH MỤC SẢN PHẨM HONDA" title="Chọn xe hợp với bạn" link="Xem tất cả dòng xe" to="/cars"/><div className="car-grid">{cars.filter(c => c.verified).slice(0, 4).map(car => <CarCard key={car.id} car={car}/>)}</div><div className="catalog-footnote">Giá tham khảo theo nguồn Honda Việt Nam. Liên hệ Vinh để cập nhật ưu đãi và tình trạng xe.</div></section>
+    <section className="section container featured-section"><SectionTitle eyebrow="DANH MỤC SẢN PHẨM HONDA" title="Chọn xe hợp với bạn" link="Xem tất cả dòng xe" to="/cars"/><div className="car-grid">{(featuredCars.length ? featuredCars : cars).slice(0, 4).map(car => <CarCard key={car.id} car={car}/>)}</div><div className="catalog-footnote">Giá tham khảo theo nguồn Honda Việt Nam. Liên hệ Vinh để cập nhật ưu đãi và tình trạng xe.</div></section>
     <section className="why-section"><div className="container why-layout"><div className="why-intro"><span className="eyebrow light"><i/>TƯ VẤN CÙNG VINH</span><h2>Không chỉ chọn một chiếc xe.<br/><em>Chọn sự phù hợp.</em></h2><p>Mỗi khách hàng có một nhu cầu riêng. Vinh đồng hành từ lúc tìm hiểu phiên bản đến khi bạn sẵn sàng đưa ra lựa chọn.</p><Link to="/contact" className="button button-white">Trao đổi cùng Vinh <ArrowRight size={15}/></Link></div><div className="why-points"><article><span>01</span><div><BadgeCheck/><h3>Thông tin có nguồn</h3><p>Giá và thông số tham khảo dẫn nguồn Honda Việt Nam, kèm lưu ý cần xác nhận.</p></div></article><article><span>02</span><div><CircleHelp/><h3>Tư vấn theo nhu cầu</h3><p>Cùng làm rõ mục đích sử dụng, ngân sách và phiên bản bạn đang cân nhắc.</p></div></article><article><span>03</span><div><ShieldCheck/><h3>Rõ ràng từng bước</h3><p>Giá lăn bánh, khuyến mãi và lịch lái thử được xác nhận trước khi quyết định.</p></div></article></div></div></section>
     <section className="section container advisor-section"><div className="advisor-card"><div className="advisor-art"><span className="advisor-initial">V</span><span className="advisor-stamp">TƯ VẤN<br/>CÁ NHÂN</span></div><div className="advisor-copy"><span className="eyebrow"><i/>NGƯỜI ĐỒNG HÀNH CỦA BẠN</span><h2>Tư vấn mua xe<br/>cùng <em>Vinh.</em></h2><p>{business.slogan}. Bạn có thể gọi hoặc nhắn Zalo để trao đổi nhanh về dòng xe, phiên bản, giá và lịch lái thử.</p><div className="advisor-contacts"><a href={business.phoneHref}><Phone size={16}/><span><small>HOTLINE TƯ VẤN</small><b>{business.phoneDisplay}</b></span></a><a href={business.zalo} target="_blank" rel="noreferrer"><span className="z-mark">Z</span><span><small>CHAT ZALO</small><b>Nhắn tin cho Vinh</b></span></a></div><Link to="/contact" className="text-link">Gửi yêu cầu tư vấn <ArrowUpRight size={15}/></Link></div></div></section>
     <section className="promo-band honda-promo"><div className="promo-image"/><div className="container promo-content"><span className="eyebrow light"><i/>ƯU ĐÃI THEO THỜI ĐIỂM</span><h2>Chính sách có thể thay đổi.<br/><em>Thông tin đúng lúc rất quan trọng.</em></h2><p>Ưu đãi, hỗ trợ trả góp và quà tặng tùy chương trình từng thời điểm. Vinh sẽ kiểm tra thông tin hiện hành theo mẫu xe bạn chọn.</p><Link to="/promotions" className="button button-white">Hỏi chương trình hiện có <ArrowRight size={16}/></Link><small>Không công bố ưu đãi cố định khi chưa có xác nhận chính thức.</small></div></section>

@@ -4,12 +4,13 @@ import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, ExternalLink, 
 import { Swiper, SwiperSlide } from 'swiper/react'
 import type { Swiper as SwiperInstance } from 'swiper'
 import 'swiper/css'
-import { cars } from '../data/cars'
-import { business } from '../data/business'
+import { useCatalogCars } from '../hooks/useCatalog'
+import { useBusinessSettings } from '../hooks/BusinessSettings'
 import { CarCard, EmptyState } from '../components/UI'
 
 export default function CarDetail() {
-  const { slug } = useParams(); const car = cars.find(c => c.slug === slug)
+  const business = useBusinessSettings()
+  const cars = useCatalogCars(); const { slug } = useParams(); const car = cars.find(c => c.slug === slug)
   const [imageIndex, setImageIndex] = useState(0); const [color, setColor] = useState(0); const [trim, setTrim] = useState(0)
   const gallerySwiper = useRef<SwiperInstance | null>(null)
   if (!car) return <section className="container detail-empty"><EmptyState title="Không tìm thấy mẫu xe" body="Mẫu xe này không có trong danh mục hiện tại." action="Khám phá các dòng xe"/></section>

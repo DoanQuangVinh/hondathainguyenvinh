@@ -4,14 +4,15 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Layout } from './layouts/Layout'
 import { useCompare } from './hooks/useCompare'
 import { business } from './data/business'
-import { cars } from './data/cars'
+import { useCatalogCars } from './hooks/useCatalog'
+import { BusinessSettingsProvider } from './hooks/BusinessSettings'
 
 const Home = lazy(() => import('./pages/Home'))
 const CarsPage = lazy(() => import('./pages/Cars'))
 const CarDetail = lazy(() => import('./pages/CarDetail'))
 const Compare = lazy(() => import('./pages/Compare'))
 const PriceList = lazy(() => import('./pages/PriceList'))
-const Promotions = lazy(async () => ({ default: (await import('./pages/Content')).Promotions }))
+const Promotions = lazy(() => import('./pages/Promotions'))
 const News = lazy(async () => ({ default: (await import('./pages/Content')).News }))
 const NewsDetail = lazy(async () => ({ default: (await import('./pages/Content')).NewsDetail }))
 const TestDrive = lazy(async () => ({ default: (await import('./pages/Content')).TestDrive }))
@@ -30,6 +31,7 @@ const seo: Record<string, [string, string]> = {
 function RouteLoading() { return <div className="route-loading" role="status"><span/>Đang mở nội dung…</div> }
 export default function App() {
   const location = useLocation(); const compare = useCompare()
+  const cars = useCatalogCars()
   useEffect(() => {
     const car = location.pathname.startsWith('/cars/') ? cars.find(item => item.slug === location.pathname.split('/').pop()) : undefined
     const [title, description] = seo[location.pathname] || (car ? [`${car.name} | Tư vấn cùng Vinh – Honda Ô tô Thái Nguyên`, `Xem phiên bản, giá tham khảo và thông tin ${car.name}. Liên hệ Vinh 0904 349 720 để được tư vấn.`] : location.pathname.startsWith('/news/') ? ['Góc tư vấn ô tô | Honda Ô tô Thái Nguyên – Vinh', 'Thông tin tham khảo trước khi chọn xe Honda.'] : seo['/'])
@@ -37,5 +39,5 @@ export default function App() {
     const setMeta = (selector: string, key: string, value: string) => { let tag = document.querySelector(selector); if (!tag) { tag = document.createElement('meta'); tag.setAttribute(key, selector.includes('og:') ? selector.match(/og:(title|description|url)/)?.[0] || '' : 'description'); document.head.append(tag) }; tag.setAttribute('content', value) }
     setMeta('meta[name="description"]', 'name', description); setMeta('meta[property="og:title"]', 'property', title); setMeta('meta[property="og:description"]', 'property', description); setMeta('meta[property="og:url"]', 'property', `${window.location.origin}${location.pathname}`)
   }, [location.pathname])
-  return <Layout><AnimatePresence mode="wait"><motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .2 }}><Suspense fallback={<RouteLoading/>}><Routes location={location}><Route path="/" element={<Home/>}/><Route path="/cars" element={<CarsPage ids={compare.ids} toggle={compare.toggle}/>}/><Route path="/cars/:slug" element={<CarDetail/>}/><Route path="/price-list" element={<PriceList/>}/><Route path="/compare" element={<Compare ids={compare.ids} remove={compare.remove} toggle={compare.toggle}/>}/><Route path="/promotions" element={<Promotions/>}/><Route path="/news" element={<News/>}/><Route path="/news/:slug" element={<NewsDetail/>}/><Route path="/test-drive" element={<TestDrive/>}/><Route path="/contact" element={<Contact/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Suspense></motion.div></AnimatePresence></Layout>
+  return <BusinessSettingsProvider><Layout><AnimatePresence mode="wait"><motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .2 }}><Suspense fallback={<RouteLoading/>}><Routes location={location}><Route path="/" element={<Home/>}/><Route path="/cars" element={<CarsPage ids={compare.ids} toggle={compare.toggle}/>}/><Route path="/cars/:slug" element={<CarDetail/>}/><Route path="/price-list" element={<PriceList/>}/><Route path="/compare" element={<Compare ids={compare.ids} remove={compare.remove} toggle={compare.toggle}/>}/><Route path="/promotions" element={<Promotions/>}/><Route path="/news" element={<News/>}/><Route path="/news/:slug" element={<NewsDetail/>}/><Route path="/test-drive" element={<TestDrive/>}/><Route path="/contact" element={<Contact/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Suspense></motion.div></AnimatePresence></Layout></BusinessSettingsProvider>
 }

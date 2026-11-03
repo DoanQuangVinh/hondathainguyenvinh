@@ -1,82 +1,74 @@
 # Honda Ô tô Thái Nguyên — tư vấn cùng Vinh
 
-Website tư vấn bán hàng cá nhân xây trên React, Vite, TypeScript, Tailwind CSS, React Router, Framer Motion, Swiper và Lucide React. Trang không tự nhận là website chính thức của Honda Việt Nam hoặc đại lý được ủy quyền.
+React, Vite, TypeScript, Cloudflare Pages Functions, D1 và R2. Đây là website tư vấn bán hàng cá nhân; không tự nhận là website chính thức của Honda Việt Nam hoặc đại lý được ủy quyền.
 
-## Chạy tại máy
+## Chạy và build
 
 ```bash
 npm install
 npm run dev
+npm run build
 ```
 
-Kiểm tra TypeScript và tạo bản production:
+Cloudflare Pages build command: `npm run build`; output: `dist`. `public/_redirects` hỗ trợ SPA routes. Các lệnh dưới đây không được chạy tự động trong build.
+
+## D1 hiện có và migration
+
+`wrangler.jsonc` dùng database `honda-thai-nguyen-leads`, ID `217539f7-61db-4441-a9f6-1ab5ef51d177`, binding `LEADS_DB`. Không tạo database mới.
+
+- `0001_create_leads.sql` tạo schema lead ban đầu.
+- `0002_cms_crm.sql` chỉ thêm trường CRM, index và các bảng `cars`, `articles`, `site_settings`, `media_assets`; không xóa hay tái tạo dữ liệu.
+- Cloudflare D1 Production đã ghi nhận cả `0001_create_leads.sql` và `0002_cms_crm.sql`; đã đối chiếu schema thực tế. Không chạy lại hai migration này.
+- Backup production trước khi cập nhật: `npx wrangler d1 export honda-thai-nguyen-leads --remote --output=backup-honda-leads.sql`.
+- Chỉ chạy migration mới khi đã rà backup, đối chiếu trạng thái D1 và được duyệt. Migration Production là bước riêng, không chạy tự động trong Pages build/deploy.
+
+## Cấu hình Cloudflare Pages
+
+Trong **Pages → Settings → Bindings**, xác nhận D1 binding `LEADS_DB` trỏ đến đúng database ở trên. Thêm các biến trong **Settings → Variables and Secrets** cho cả Production và Preview khi cần:
+
+- `RATE_LIMIT_SECRET`: secret ngẫu nhiên riêng cho từng môi trường, tối thiểu 32 ký tự.
+- `RETENTION_ENABLED=true`: chỉ bật sau khi migration production đã chạy và Worker lưu giữ dữ liệu đã được triển khai, kiểm tra. Worker xóa lead cũ sau 180 ngày; nếu chưa bật Worker, API gửi lead vẫn nên đóng.
+- `CF_ACCESS_TEAM_DOMAIN`: issuer HTTPS dạng `https://<team>.cloudflareaccess.com`.
+- `CF_ACCESS_AUD`: Audience Tag của ứng dụng Access.
+- `ADMIN_EMAIL`: email duy nhất được phép quản trị.
+- `MEDIA_PUBLIC_URL`: domain công khai đã gắn với R2 bucket, không kết thúc bằng `/`.
+
+Tạo Cloudflare Access self-hosted application cho `hondathainguyenvinh.pages.dev/admin*` và `hondathainguyenvinh.pages.dev/api/admin/*`; policy chỉ cho phép email quản trị. API vẫn tự xác thực chữ ký JWT, issuer, audience và email ở server trên từng endpoint. Không có mật khẩu admin trong mã nguồn. Người quản trị đăng nhập qua Cloudflare Access.
+
+## R2 upload ảnh
+
+`wrangler.jsonc` khai báo binding `MEDIA_BUCKET` và bucket đã tồn tại `hondathainguyen-media`; không tạo bucket mới. Gắn custom domain/public delivery cho bucket, sau đó đặt `MEDIA_PUBLIC_URL` bằng domain ảnh đó. Ảnh tải lên được ghi vào R2, metadata vào D1; Pages không lưu file upload trong `dist`. API chỉ nhận JPEG, PNG, WebP, AVIF tối đa 8 MB và yêu cầu Access.
+
+## CRM, CMS và popup
+
+- `POST /api/leads`: xác thực nguồn, kiểm tra số di động và consent, honeypot, giới hạn tần suất bằng IP đã HMAC, chống bản ghi trùng trong 10 phút. Dữ liệu số điện thoại không đi vào analytics.
+- `/admin`: dashboard và CRM có tìm kiếm phía server, phân trang, trạng thái, ghi chú, lịch hẹn, xác nhận xóa và CSV cho trang hiện tại. Các API quản trị `leads`, `stats`, `cars`, `content`, `media` đều xác thực Cloudflare Access phía server.
+- CMS xe hỗ trợ thêm/sửa/xóa, giá, mô tả, thông số, phiên bản, màu, ảnh, SEO, trạng thái nháp/đăng và đánh dấu xe nổi bật. Form có các trường riêng; không cần sửa JSON. Có thể nhập danh mục xe mẫu để khởi tạo.
+- CMS bài viết và khuyến mãi hỗ trợ thêm/sửa/xóa, ảnh bìa, slug, nội dung, SEO và trạng thái nháp/đăng. Tin tức và khuyến mãi đã đăng lấy từ catalog D1; dữ liệu tĩnh chỉ dùng khi D1 chưa được cấu hình hoặc API catalog gặp lỗi.
+- Thư viện ảnh quản lý file tải lên R2 và metadata trong D1. Mỗi xe/bài viết hiện dùng một ảnh bìa; album nhiều ảnh và sắp xếp thứ tự ảnh chưa có.
+- Popup hiện sau khoảng 1,5 giây, tối đa một lần mỗi phiên, có thể bỏ qua, lựa chọn xe tùy chọn và checkbox consent bắt buộc. Các form liên hệ/lái thử và popup gửi lead qua Pages Functions.
+
+### Chạy Pages cục bộ
 
 ```bash
+npm run d1:migrate:local
+Copy-Item .dev.vars.example .dev.vars
 npm run build
-npm run preview
+npm run pages:dev
 ```
 
-Build output nằm tại `dist/`.
+Điền giá trị local vào `.dev.vars`; không commit file này. Local không có phiên Cloudflare Access hợp lệ mặc định, nên API admin trả lỗi cấu hình/xác thực cho đến khi môi trường kiểm thử có Access tương ứng.
 
-## Cloudflare Pages
+## Backup, GitHub và deploy
 
-- Build command: `npm run build`
-- Build output directory: `dist`
-- SPA rewrite: `public/_redirects` chuyển các URL ứng dụng về `index.html`.
+Tải backup D1 ra nơi lưu trữ riêng có kiểm soát quyền truy cập. Không đưa SQL backup hoặc dữ liệu lead vào GitHub. Migration production là bước riêng sau backup và duyệt. Push tới `DoanQuangVinh/hondathainguyenvinh` hoặc deploy Pages chỉ thực hiện khi được yêu cầu; repository hiện có thể kết nối GitHub Pages project với build command `npm run build` và output `dist`.
 
-Sau khi biết domain Pages/custom domain, thay `honda-thai-nguyen.example` trong `public/robots.txt` và `public/sitemap.xml` bằng domain thật. `og:url` được cập nhật theo host đang chạy.
+## Còn giới hạn
 
-## Lead Capture, D1 và quản trị
+- Cần duy trì cấu hình Access, biến môi trường và domain phân phối R2 trong tài khoản Cloudflare; repo không thể tự tạo/triển khai các tài nguyên này.
+- CMS có giao diện tải/chọn/xóa ảnh R2; album nhiều ảnh trên trang chi tiết xe và sắp xếp ảnh chưa hoàn thiện.
+- Nội dung CMS xe và bài viết hiển thị sau khi khởi tạo/đăng bản ghi. Hero/banner trang chủ, menu/footer, logo, favicon, màu theme và toàn bộ khối nội dung chưa có trình dựng CMS.
+- Các trường SEO CMS được lưu; trang hiện dùng SEO mặc định theo route, chưa áp dụng đầy đủ SEO title/description riêng từ CMS cho mọi route.
+- Hotline, Zalo và địa chỉ chỉnh được trong CMS; website kiểm tra định dạng số điện thoại và chỉ chấp nhận URL Zalo HTTPS trước khi dùng.
 
-Popup chỉ xuất hiện ở trang chủ sau 3 giây. Đóng popup hoặc gửi thành công sẽ được ghi nhớ trong `sessionStorage` đến hết phiên; số điện thoại không được lưu trong trình duyệt hoặc URL. Form có checkbox đồng ý bắt buộc, kiểm tra số di động Việt Nam, trường honeypot và thông báo lỗi. API chỉ trả `201` sau khi D1 xác nhận đã thêm đúng một bản ghi. Chưa có binding D1/secret thì API trả `503`, không giả lập thành công.
-
-### Tạo database và migration
-
-1. Cài Wrangler khi chạy nhóm lệnh Cloudflare (các script dùng `npx wrangler@latest`) và đăng nhập: `npx wrangler login`.
-2. Chạy `npm run d1:create`. Ghi lại `database_id` Cloudflare trả về.
-3. Thay `REPLACE_WITH_D1_DATABASE_ID` trong `wrangler.jsonc` và `workers/lead-retention/wrangler.jsonc` bằng cùng `database_id`.
-4. Chạy migration local: `npm run d1:migrate:local`.
-5. Chạy migration production sau khi kiểm tra: `npm run d1:migrate:remote`.
-
-Migration `migrations/0001_create_leads.sql` tạo bảng lead và bucket giới hạn tần suất. Trang Pages cần binding D1 tên `LEADS_DB`; cấu hình đã chuẩn bị trong `wrangler.jsonc`.
-
-### Secrets và triển khai Pages Functions
-
-- Tạo `RATE_LIMIT_SECRET` bí mật dài ít nhất 32 ký tự, khác nhau giữa môi trường preview/production. API dùng HMAC của IP do Cloudflare cung cấp để giới hạn 10 yêu cầu/phút và 30 yêu cầu/ngày; địa chỉ IP thô không được ghi vào D1.
-- Trong Cloudflare Pages project, thêm `RATE_LIMIT_SECRET` ở **Settings → Variables and Secrets** dưới dạng secret. `LEADS_DB` được cấu hình bằng D1 binding ở **Settings → Bindings** hoặc từ Wrangler config; redeploy Pages sau khi thay binding.
-- Đặt `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `ADMIN_EMAIL` sau khi tạo ứng dụng Cloudflare Access. `ADMIN_EMAIL` là email đăng nhập thật của Vinh; không dùng email ví dụ trong `.dev.vars.example`.
-- Pages Functions nằm trong `functions/`: `POST /api/leads` tạo lead; `GET/DELETE /api/admin/leads` yêu cầu JWT Cloudflare Access hợp lệ, đúng audience/issuer và email khớp `ADMIN_EMAIL`. API không có route đọc dữ liệu công khai.
-- Trong Cloudflare Zero Trust, tạo self-hosted Access application bảo vệ path `/admin*` và `/api/admin/*`; policy chỉ cho phép email của Vinh. API vẫn tự xác thực chữ ký JWT, audience và email nên chỉ đặt lớp bảo vệ ở trình duyệt không đủ.
-- Deploy Pages bằng build command `npm run build`, output `dist`. Để thử Pages Functions cục bộ: tạo D1 và local migration, sao chép `.dev.vars.example` thành `.dev.vars`, điền giá trị local rồi chạy `npm run build` và `npm run pages:dev`. `.dev.vars` bị gitignore.
-
-### Quản trị, xóa dữ liệu và lưu giữ
-
-`/admin` hiển thị tối đa 200 lead gần nhất sau khi xác thực. Nút xóa gọi API quản trị có xác thực. Không bật quản trị cho tới khi Access, AUD và email cho phép được cấu hình đồng thời.
-
-Lead lưu số điện thoại, dòng xe, phiên bản đồng ý và thời điểm gửi. Dữ liệu được dùng để Vinh liên hệ tư vấn và tự xóa sau 180 ngày. Để yêu cầu xóa sớm, khách gọi `0904 349 720` hoặc nhắn [Zalo Vinh](https://zalo.me/0904349720). Bucket chống spam chỉ giữ IP đã băm và được xóa sau tối đa 48 giờ.
-
-Để áp dụng chính sách lưu giữ thực tế, triển khai thêm Worker dọn dữ liệu theo lịch: sau khi thay D1 ID trong `workers/lead-retention/wrangler.jsonc`, chạy `npm run retention:deploy`. Cron chạy hằng ngày lúc 03:17 UTC và xóa lead quá 180 ngày cùng bucket chống spam đã cũ. Nếu chưa triển khai Worker này, thời hạn tự xóa chưa được đảm bảo; hãy bật Worker trước khi thu lead production.
-
-API nhận lead mặc định đóng. Chỉ đặt biến môi trường `RETENTION_ENABLED=true` cho Pages sau khi Worker dọn dữ liệu đã deploy thành công và chạy migration D1 production; nếu thiếu biến này, API trả `503` và không lưu lead. Trong môi trường local, giữ `false` cho đến khi đã thiết lập lịch dọn dữ liệu tương ứng.
-
-Nếu D1, secret, Access hoặc Worker dọn dữ liệu chưa được cấu hình thì không nên đưa popup/API vào hoạt động production; README và thông báo API không coi cấu hình thiếu là gửi thành công.
-
-## Nội dung và liên hệ
-
-- Điện thoại: `0904 349 720`, link gọi `tel:0904349720`.
-- Zalo: `https://zalo.me/0904349720`.
-- Địa chỉ showroom và Facebook chưa được cung cấp nên không hiển thị địa chỉ cụ thể hoặc nút Facebook.
-- Form nhận báo giá gửi dữ liệu tới Pages Function và chỉ báo thành công sau khi D1 xác nhận lưu. Form khác không lưu thông tin cá nhân vào localStorage hoặc URL. Lịch lái thử chưa được xác nhận tự động.
-- Giá tham khảo được tách tại `src/data/cars.ts`, dựa trên các trang sản phẩm/bảng giá Honda Việt Nam tại ngày 03/11/2026. Giá, màu, phiên bản và tình trạng cần kiểm tra lại với nguồn chính thức trước khi tư vấn.
-- Accord được giữ làm trang tra cứu theo yêu cầu nhưng đánh dấu chưa xác minh trong danh mục hiện hành; không hiện giá/phiên bản suy đoán.
-- Ảnh xe trỏ đến ảnh sản phẩm trên CDN Honda Việt Nam. Ảnh nội thất/góc nhìn không có nguồn xác minh được thay bằng placeholder ghi rõ. Kiểm tra quyền dùng tài sản thương hiệu trước khi triển khai thương mại.
-
-## Nguồn đối chiếu
-
-- [Danh mục ô tô Honda Việt Nam](https://www.honda.com.vn/o-to)
-- [Bảng giá sản phẩm Honda Việt Nam](https://www.honda.com.vn/index.php/o-to/bang-gia-xe)
-- [Honda City](https://www.honda.com.vn/o-to/chi-tiet/2)
-- [Honda BR-V](https://www.honda.com.vn/o-to/chi-tiet/18)
-- [Honda HR-V](https://www.honda.com.vn/o-to/chi-tiet/21)
-- [Honda Civic](https://www.honda.com.vn/o-to/chi-tiet/19)
-- [Honda CR-V](https://www.honda.com.vn/o-to/chi-tiet/17)
+Giá và phiên bản là thông tin tham khảo, cần xác nhận lại trước khi tư vấn. Thông tin liên hệ: Vinh · `0904 349 720` · https://zalo.me/0904349720.

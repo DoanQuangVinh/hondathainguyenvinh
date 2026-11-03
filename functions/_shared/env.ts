@@ -11,11 +11,20 @@ export interface D1Database {
 
 export interface LeadEnv {
   LEADS_DB?: D1Database
+  MEDIA_BUCKET?: R2Bucket
+  MEDIA_PUBLIC_URL?: string
   RATE_LIMIT_SECRET?: string
   RETENTION_ENABLED?: string
   CF_ACCESS_TEAM_DOMAIN?: string
   CF_ACCESS_AUD?: string
   ADMIN_EMAIL?: string
+}
+
+export interface R2ObjectBody { arrayBuffer(): Promise<ArrayBuffer> }
+export interface R2Bucket {
+  put(key: string, value: ArrayBuffer | ArrayBufferView, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>
+  delete(key: string): Promise<void>
+  get(key: string): Promise<R2ObjectBody | null>
 }
 
 export interface PagesContext<E> {
